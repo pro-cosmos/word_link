@@ -1,0 +1,11 @@
+
+word_link.settings:
+  path: '/admin/config/word_link/settings'
+  defaults:
+    _form: '\Drupal\word_link\Form\WordLinkSettings'
+    _title: 'WordLinkSettings'
+  requirements:
+    _permission: 'access administration pages'
+  options:
+    _admin_route: TRUE
+

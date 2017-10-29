@@ -1,0 +1,21 @@
+# Word link routing definition
+word_link.settings_tab:
+  route_name: word_link.settings
+  title: 'Settings'
+  base_route: word_link.settings
+
+entity.word_link.canonical:
+  route_name: entity.word_link.canonical
+  base_route: entity.word_link.canonical
+  title: 'View'
+
+entity.word_link.edit_form:
+  route_name: entity.word_link.edit_form
+  base_route: entity.word_link.canonical
+  title: 'Edit'
+
+entity.word_link.delete_form:
+  route_name:  entity.word_link.delete_form
+  base_route:  entity.word_link.canonical
+  title: Delete
+  weight: 10

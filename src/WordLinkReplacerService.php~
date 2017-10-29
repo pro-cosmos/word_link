@@ -1,0 +1,278 @@
+<?php
+
+namespace Drupal\word_link;
+
+use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\Unicode;
+use Drupal\Component\Utility\UrlHelper;
+use Drupal\Core\Url;
+
+/**
+ * Class WordLinkReplacerService.
+ */
+class WordLinkReplacerService implements WordLinkReplacerServiceInterface {
+
+  /**
+   * Constructs a new WordLinkReplacerService object.
+   */
+  public function __construct() {
+
+  }
+
+  /**
+   * Load the content and replace the matched strings with automatic links.
+   */
+  public function word_link_load_all() {
+    $row = new \stdClass();
+    $row->text = 'Kumho';
+    $row->case_sensitive = true;
+    $row->url = '/tire/Kumho';
+    $row->url_title = 'title Kumho';
+    $row->class = 'replaced-class';
+    $row->visibility = 0;
+    $row->except_list = '';
+    $row->weight = 1;
+    $row->rel = '';
+    $row->status = 1;
+
+    return [
+      Unicode::strtolower($row->text) => $row
+    ];
+  }
+
+
+  /**
+   * Find and convert defined word to link.
+   *
+   * @param string $text
+   *   Input text.
+   * @param array $settings
+   *   Array of filter settings.
+   *
+   * @return string
+   *   String with converted words.
+   */
+  public function word_link_convert_text($text, $settings) {
+    global $base_url;
+    // Get current path. We need this to verify
+    // if word will be converted on this page.
+    $current_path = \Drupal::service('path.current')->getPath(); //current_path();
+
+    // Get array of words.
+    $words = $this->word_link_load_all();
+
+    // Exit if there are no words to replace.
+    if (empty($words)) {
+      return $text;
+    }
+
+    // Default HTML tag used in theme.
+    $tag = 'a';
+
+    // Get disallowed html tags and convert it for Xpath.
+    if (!empty($settings->get('word_link_tags_except'))) {
+      $disallowed = &drupal_static('word_link_disallowed_tags');
+      if (!isset($disallowed)) {
+        $disallowed_tags = preg_split('/\s+|<|>/', $settings->get('word_link_tags_except'), -1, PREG_SPLIT_NO_EMPTY);
+        $disallowed = array();
+        foreach ($disallowed_tags as $ancestor) {
+          $disallowed[] = 'and not(ancestor::' . $ancestor . ')';
+        }
+        $disallowed = implode(' ', $disallowed);
+      }
+    }
+    else {
+      $disallowed = '';
+    }
+
+    // Create pattern.
+    $patterns = &drupal_static('word_link_patterns');
+    if (!isset($patterns)) {
+      $path_alias = \Drupal::service('path.alias_manager')->getAliasByPath($current_path);//$system_path, $langcode);
+      $path = Unicode::strtolower($path_alias);
+      $pattern = array();
+      foreach ($words as $word) {
+        $url = str_replace($base_url . '/', '', $word->url);
+        $url = \Drupal::service('path.alias_manager')->getAliasByPath($url); //drupal_get_path_alias($url);
+        $match = FALSE;
+
+        // Check if current path matches word except path.
+        if (!empty($word->except_list)) {
+          $match = \Drupal::service('path.matcher')->matchPath($path, $word->except_list);
+          if ($path != $current_path) {
+            $match = $match || \Drupal::service('path.matcher')->matchPath($current_path, $word->except_list);
+          }
+        }
+
+        // Get visibility status and check if need to convert word on this page.
+        $visibility = empty($word->except_list) || !isset($word->visibility) ? FALSE : $word->visibility;
+
+        if ($url != $path && !$match && !$visibility || $url != $path && $visibility && $match) {
+          $text_lower = preg_replace('/\s+/', ' ', trim($word->text_lower));
+          $pattern[] = preg_replace('/ /', '\\s+', preg_quote($text_lower, '/'));
+        }
+      }
+
+      // Chunk pattern string to avoid preg_match_all() limits.
+      $patterns = array();
+      foreach (array_chunk($pattern, 1000, TRUE) as $pattern_chunk) {
+        if ($settings->get('word_link_boundary')) {
+          $patterns[] = '/(?<=)(' . implode('|', $pattern_chunk) . ')/ui';
+        }
+        else {
+          $patterns[] = '/((\b)|(?<=))(' . implode('|', $pattern_chunk) . ')\b/ui';
+        }
+      }
+    }
+
+    foreach ($patterns as $pattern) {
+      $this->word_link_convert_text_recursively($text, $pattern, $words, $disallowed, $settings, $tag);
+    }
+
+    return $text;
+  }
+
+   /**
+   * Helper function for converting text.
+   *
+   * @param string $text
+   *   Input text.
+   * @param string $pattern
+   *   Regular expression pattern.
+   * @param array $words
+   *   Array of all words.
+   * @param string $disallowed
+   *   Disallowed tags.
+   * @param array $settings
+   *   Array of filter settings.
+   * @param string $tag
+   *   Tag that will be used to replace word.
+   */
+  public function word_link_convert_text_recursively(&$text, $pattern, $words, $disallowed, $settings, $tag) {
+    // Create DOM object.
+    $dom = Html::load($text); //filter_dom_load($text);
+    $xpath = new \DOMXpath($dom); //new DOMXPath($dom);
+    $text_nodes = $xpath->query('//text()[not(ancestor::a) ' . $disallowed . ']');
+
+    foreach ($text_nodes as $original_node) {
+      $text = $original_node->nodeValue;
+      $match_count = preg_match_all($pattern, $text, $matches, PREG_OFFSET_CAPTURE);
+
+      if ($match_count > 0) {
+        $offset = 0;
+        $parent = $original_node->parentNode;
+        $next = $original_node->nextSibling;
+        $parent->removeChild($original_node);
+
+        foreach ($matches[0] as $delta => $match) {
+          $match_text = $match[0];
+          $match_pos = $match[1];
+          $text_lower = Unicode::strtolower($match_text);
+          $word = $words[$text_lower];
+
+          if ($word && (($word->case_sensitive && $word->text == $match_text) || !$word->case_sensitive)) {
+            $prefix = substr($text, $offset, $match_pos - $offset);
+            $parent->insertBefore($dom->createTextNode($prefix), $next);
+
+            $link = $dom->createDocumentFragment();
+
+            $word_link_rendered = &drupal_static('word_link_rendered');
+            if (!isset($word_link_rendered[$word->id])) {
+             // if ($cache = cache_get('word_link_rendered_' . $word->id)) {
+              if ($cache = \Drupal::cache()->get('word_link_rendered_' . $word->id)) {
+                $word_link_rendered[$word->id] = $cache->data;
+              }
+              else {
+                $target = UrlHelper::isExternal($word->url) ? '_blank' : '';
+
+                $url_external = UrlHelper::isExternal($word->url);
+                $url_options = array();
+                $url_path = NULL;
+
+                if ($url_external) {
+                  $url_path = $word->url;
+                }
+                else {
+                  $url_parts = parse_url($word->url);
+                  $url_query = array();
+                  if (isset($url_parts['query'])) {
+                    parse_str($url_parts['query'], $url_query);
+                  }
+                  $url_options = array(
+                    'query' => $url_query,
+                    'fragment' => isset($url_parts['fragment']) ? $url_parts['fragment'] : '',
+                  );
+
+                  if (empty($url_parts['path'])) {
+                    // Assuming that URL starts with #.
+                    $url_options['external'] = TRUE;
+                    $url_path = NULL;
+                  }
+                  else {
+                    $url_path = $url_parts['path'];
+                  }
+                }
+
+                $attributes = array(
+                  'href' =>  Url::fromUri($url_path, $url_options),
+                  'title' => $word->url_title,
+                  'class' => $word->class,
+                  'target' => $target,
+                  'rel' => $word->rel,
+                );
+
+                if ($settings->get('word_link_highlight')) {
+                  $tag = 'span';
+                  unset($attributes['href'], $attributes['target'], $attributes['rel']);
+                }
+
+                $word_link_rendered[$word->id] = theme(
+                  'word_link',
+                  array(
+                    'text' => $match_text,
+                    'tag' => $tag,
+                    'attributes' => array_filter($attributes),
+                  )
+                );
+
+                if (!empty($settings->get('word_link_wrap_tag'))) {
+                  $word_link_rendered[$word->id] = theme(
+                    'html_tag',
+                    array(
+                      'element' => array(
+                        '#tag' => $settings->get('word_link_wrap_tag'),
+                        '#value' => $word_link_rendered[$word->id],
+                      ),
+                    )
+                  );
+                }
+
+                \Drupal::cache()->get('word_link_rendered_' . $word->id, $word_link_rendered[$word->id], 'cache');
+              }
+            }
+
+            $link->appendXML($word_link_rendered[$word->id]);
+
+            $parent->insertBefore($link, $next);
+            $offset = $match_pos + strlen($match_text);
+          }
+          else {
+            $prefix = substr($text, $offset, $match_pos - $offset);
+            $parent->insertBefore($dom->createTextNode($prefix), $next);
+            $parent->insertBefore($dom->createTextNode($match_text), $next);
+            $offset = $match_pos + strlen($match_text);
+          }
+
+          if ($delta == $match_count - 1) {
+            $suffix = substr($text, $offset);
+            $parent->insertBefore($dom->createTextNode($suffix), $next);
+          }
+        }
+      }
+    }
+
+    $text = Html::serialize($dom); //filter_dom_serialize($dom);
+  }
+
+
+}

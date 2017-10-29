@@ -1,0 +1,5 @@
+entity.word_link.add_form:
+  route_name: entity.word_link.add_form
+  title: 'Add Word link'
+  appears_on:
+    - entity.word_link.collection

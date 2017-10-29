@@ -1,0 +1,9 @@
+word_link_content_types:
+  - page
+word_link_tags_except: '<h1> <h2> <h3> <h4> <h5> <h6> <code>'
+word_link_highlight: false
+word_link_wrap_tag: NULL
+word_link_reg_all: '(?<=)(%s)'
+word_link_reg_words_only: '(\b)(%s)\b'
+word_link_page_max_links: 0
+

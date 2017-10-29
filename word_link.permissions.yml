@@ -1,0 +1,22 @@
+add word link entities:
+  title: 'Create new Word link entities'
+
+administer word link entities:
+  title: 'Administer Word link entities'
+  description: 'Allow to access the administration form to configure Word link entities.'
+  restrict access: true
+
+delete word link entities:
+  title: 'Delete Word link entities'
+
+edit word link entities:
+  title: 'Edit Word link entities'
+
+access word link overview:
+  title: 'Access the Word link overview page'
+
+view published word link entities:
+  title: 'View published Word link entities'
+
+view unpublished word link entities:
+  title: 'View unpublished Word link entities'

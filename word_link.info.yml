@@ -1,0 +1,5 @@
+name: Word Link
+type: module
+description: Word Link ported for Drupal 8
+core: 8.x
+package: Custom

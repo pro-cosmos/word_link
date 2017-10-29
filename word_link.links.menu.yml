@@ -1,0 +1,21 @@
+word_link.settings:
+  title: 'Word Link Settings'
+  route_name: word_link.settings
+  description: 'A description for the menu entry'
+  parent: system.admin_config_system
+  weight: 99
+
+
+# Word link menu items definition
+entity.word_link.collection:
+  title: 'Word link list'
+  route_name: entity.word_link.collection
+  description: 'List Word link entities'
+  parent: system.admin_structure
+  weight: 100
+
+word_link.admin.structure.settings:
+  title: Word link settings
+  description: 'Configure Word link entities'
+  route_name: word_link.settings
+  parent: system.admin_structure

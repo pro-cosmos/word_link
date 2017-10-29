@@ -1,0 +1,83 @@
+<?php
+
+/**
+ * @file
+ * Contains word_link.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+
+/**
+ * Implements hook_help().
+ */
+function word_link_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the word_link module.
+    case 'help.page.word_link':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Word Link ported for Drupal 8') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_entity_build_defaults().
+ * @param array $build
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ * @param $view_mode
+ */
+function word_link_entity_build_defaults_alter(array &$build, \Drupal\Core\Entity\EntityInterface $entity, $view_mode) {
+  if ($view_mode == 'full') {
+    $settings = Drupal::configFactory()->get('word_link.settings');
+    $content_types = array_filter($settings->get('word_link_content_types'));
+    if (!empty($content_types[$entity->bundle()])) {
+      \Drupal\Core\Cache\Cache::invalidateTags($entity->getCacheTags());
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_view().
+ */
+function word_link_entity_view(array &$build, \Drupal\Core\Entity\EntityInterface $entity, \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display, $view_mode) {
+  if ($view_mode == 'full') {
+    $settings = Drupal::configFactory()->get('word_link.settings');
+    $content_types = array_filter($settings->get('word_link_content_types'));
+    if (!empty($content_types[$entity->bundle()])) {
+      $Replacer = \Drupal::service('word_link.replacer');
+      $text = $Replacer->word_link_convert_text($entity, $settings);
+      $build['body'][0]['#text'] = $text;
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_presave().
+ */
+function word_link_entity_presave(Drupal\Core\Entity\EntityInterface $entity) {
+  if ($entity->bundle() == 'word_link') {
+    \Drupal::cache()->delete('word_link_rendered_' . $entity->id());
+    \Drupal::cache()->invalidate('word_link_rendered_' . $entity->id());
+  }
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function word_link_entity_delete(Drupal\Core\Entity\EntityInterface $entity) {
+  if ($entity->bundle() == 'word_link') {
+    \Drupal::cache()->delete('word_link_rendered_' . $entity->id());
+  }
+}
+
+/**
+ * Custom cache clear.
+ */
+function word_link_cache_clear() {
+  $bins = \Drupal\Core\Cache\Cache::getBins();
+  $bins['default']->deleteAll();
+}

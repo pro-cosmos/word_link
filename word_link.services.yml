@@ -1,0 +1,5 @@
+services:
+  word_link.replacer:
+    class: Drupal\word_link\WordLinkReplacerService
+    arguments: []
+
