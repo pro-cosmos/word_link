@@ -25,3 +25,6 @@ word_link.settings:
     word_link_page_max_links:
       type: integer
       label: 'word_link_page_max_links'
+    word_link_page_max_urls:
+      type: integer
+      label: 'word_link_page_max_urls'

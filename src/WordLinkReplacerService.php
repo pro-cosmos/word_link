@@ -16,6 +16,7 @@ use Drupal\Core\Entity\Entity;
  */
 class WordLinkReplacerService implements WordLinkReplacerServiceInterface {
 
+  public $word_link_href_count = [];
   /**
    * Constructs a new WordLinkReplacerService object.
    */
@@ -138,7 +139,7 @@ class WordLinkReplacerService implements WordLinkReplacerServiceInterface {
 
       if ($patterns) {
         foreach ($patterns as $pattern) {
-          $text = $this->word_link_convert_text_recursively($text, $pattern, $words, $disallowed, $settings, $tag);
+          $text = $this->word_link_convert_text_recursively($text, $pattern, $words, $disallowed, $settings);
         }
       }
     }
@@ -159,14 +160,20 @@ class WordLinkReplacerService implements WordLinkReplacerServiceInterface {
    *   Disallowed tags.
    * @param array $settings
    *   Array of filter settings.
-   * @param string $tag
-   *   Tag that will be used to replace word.
    */
-  public function word_link_convert_text_recursively($text, $pattern, $words, $disallowed, $settings, $tag) {
+  public function word_link_convert_text_recursively($text, $pattern, $words, $disallowed, $settings) {
     // Create DOM object.
     $dom = Html::load($text);
     $xpath = new \DOMXpath($dom);
-    $page_links_count = $xpath->query("//a")->length;
+    $page_links = $dom->getElementsByTagName('a'); 
+    $page_links_count = $page_links->length;
+    if (empty($this->word_link_href_count)) {
+      foreach ($page_links as $node) {
+        $href = $node->attributes->getNamedItem("href")->nodeValue;
+        $this->word_link_href_count[$href]++;
+      }
+    }
+
     if ($settings->get('word_link_page_max_links') == 0 || $page_links_count < $settings->get('word_link_page_max_links')) {
       $text_nodes = $xpath->query('//text()[not(ancestor::a) ' . $disallowed . ']');
       $word_match_count = 0;
@@ -193,7 +200,6 @@ class WordLinkReplacerService implements WordLinkReplacerServiceInterface {
               $link = $dom->createDocumentFragment();
 
               $word_link_rendered = &drupal_static('word_link_rendered');
-              // Get word link
               if (!isset($word_link_rendered[$word_id])) {
                 if ($cache = \Drupal::cache()->get('word_link_rendered_' . $word_id)) {
                   $word_link_rendered[$word_id] = $cache->data;
@@ -278,10 +284,15 @@ class WordLinkReplacerService implements WordLinkReplacerServiceInterface {
               }
 
               // Change word with corresponding link.
+             $skip = isset($this->word_link_href_count[$word->url->value]) && $settings->get('word_link_page_max_urls') > 0 && $this->word_link_href_count[$word->url->value] == $settings->get('word_link_page_max_urls');
+             if (!$skip){
               $link->appendXML(str_replace('{word}', $match_text, $word_link_rendered[$word_id]));
               $page_links_count++;
+              $this->word_link_href_count[$word->url->value]++;
+
               $parent->insertBefore($link, $next);
               $offset = $match_pos + strlen($match_text);
+            }
             }
 
             // Check maximum of one word links on the page.

@@ -70,6 +70,13 @@ class WordLinkSettings extends ConfigFormBase {
       '#description' => $this->t('Max number links on the page (including existance links also).'),
       '#default_value' =>$config->get('word_link_page_max_links'),
     );
+    $form['word_link_page_max_urls'] = array(
+      '#type' => 'number',
+      '#min' => 0,
+      '#title' => $this->t('Max number links with the same url on the page'),
+      '#description' => $this->t('Max number links with the same url on the page (including existance links also).'),
+      '#default_value' =>$config->get('word_link_page_max_urls'),
+    );
     $form['word_link_tags_except'] = array(
       '#type' => 'textfield',
       '#title' => $this->t('Disallowed HTML tags'),
@@ -118,7 +125,8 @@ class WordLinkSettings extends ConfigFormBase {
       'word_link_wrap_tag',
       'word_link_reg_all',
       'word_link_reg_words_only',
-      'word_link_page_max_links'
+      'word_link_page_max_links',
+      'word_link_page_max_urls'
     ];
     foreach ($settings as $name) {
       $this->config('word_link.settings')
