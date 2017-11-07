@@ -19,3 +19,9 @@ word_link.admin.structure.settings:
   description: 'Configure Word link entities'
   route_name: word_link.settings
   parent: system.admin_structure
+
+word_link.import_form:
+  title: Import Word links
+  description: 'Import Word link entities from csv file'
+  route_name: word_link.import_form
+  parent: entity.word_link.collection

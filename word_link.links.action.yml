@@ -3,3 +3,8 @@ entity.word_link.add_form:
   title: 'Add Word link'
   appears_on:
     - entity.word_link.collection
+word_link.import_form:
+  route_name: word_link.import_form
+  title: 'Import Word links'
+  appears_on:
+    - entity.word_link.collection

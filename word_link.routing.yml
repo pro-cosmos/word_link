@@ -8,4 +8,12 @@ word_link.settings:
     _permission: 'access administration pages'
   options:
     _admin_route: TRUE
-
+word_link.import_form:
+  path: '/admin/structure/word_link/import'
+  defaults:
+    _title: 'Import Word links'
+    _form: '\Drupal\word_link\Form\WordLinkImportForm'
+  requirements:
+    _permission: 'access administration pages'
+  options:
+    _admin_route: TRUE
