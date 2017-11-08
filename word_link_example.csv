@@ -1,7 +1,5 @@
 name;weight;url;url_title;class;rel;case_sensitive;whole_word_only;page_max_links;except_list
-Michelin;1;http://michelin.com;Michelin title;michelin-class;rel;1;1;1;"/node/1
+Michelin;1;http://michelin.com;Michelin title;michelin-class;rel;1;;1;"/node/1
 test/*"
-Barum;1;/node/barum;Barum title;Barum-class;rel;1;1;1;"/node/1
-test/*"
-Apollo;1;http://yandex/appolo;Apollo title;apollo-class;rel;1;1;1;"/node/1
-test/*"
+Barum;1;/node/barum;Barum title;Barum-class;rel;;;;
+Apollo;1;http://yandex/appolo;Apollo title;apollo-class;rel;1;1;;
